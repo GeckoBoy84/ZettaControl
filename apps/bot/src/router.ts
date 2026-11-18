@@ -55,8 +55,12 @@ export async function routeInteraction(interaction: Interaction): Promise<void> 
 			return;
 		}
 		if (interaction.isChatInputCommand()) {
+			// Discord clients cache command lists, so people can still run commands from v1 for a while.
 			const command = commandsByName.get(interaction.commandName);
-			if (!command) return;
+			if (!command) {
+				await replyError(interaction, 'That command no longer exists. Use `/help` to see the current commands.');
+				return;
+			}
 			await command.execute(interaction);
 			return;
 		}
