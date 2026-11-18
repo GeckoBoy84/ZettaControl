@@ -1,11 +1,15 @@
 import { CalagopusClient, parseCalagopusErrors } from './calagopus.ts';
+import { CalagopusAdminClient } from './calagopus-admin.ts';
 import { PanelError } from './errors.ts';
 import { parseFractalErrors } from './fractal.ts';
 import { HttpClient } from './http.ts';
 import { PelicanClient } from './pelican.ts';
+import { PelicanAdminClient } from './pelican-admin.ts';
 import { Pterodactyl1Client } from './pterodactyl1.ts';
+import { Pterodactyl1AdminClient } from './pterodactyl1-admin.ts';
 import { Pterodactyl2Client } from './pterodactyl2.ts';
-import type { PanelAccount, PanelClient, PanelClientOptions, PanelKind } from './types.ts';
+import { Pterodactyl2AdminClient } from './pterodactyl2-admin.ts';
+import type { AdminClient, PanelAccount, PanelClient, PanelClientOptions, PanelKind, PanelTotals } from './types.ts';
 
 export function createPanelClient(kind: PanelKind, options: PanelClientOptions): PanelClient {
 	switch (kind) {
@@ -18,6 +22,33 @@ export function createPanelClient(kind: PanelKind, options: PanelClientOptions):
 		case 'pelican':
 			return new PelicanClient(options);
 	}
+}
+
+export function createAdminClient(kind: PanelKind, options: PanelClientOptions): AdminClient {
+	switch (kind) {
+		case 'calagopus':
+			return new CalagopusAdminClient(options);
+		case 'pterodactyl1':
+			return new Pterodactyl1AdminClient(options);
+		case 'pterodactyl2':
+			return new Pterodactyl2AdminClient(options);
+		case 'pelican':
+			return new PelicanAdminClient(options);
+	}
+}
+
+const CLIENT_KEY_PREFIXES = ['ptlc_', 'pacc_'];
+
+/**
+ * Checks an admin key before it is stored. Calagopus has one kind of key, so any key
+ * from an account with admin permissions works; elsewhere it must be an application key.
+ */
+export async function validateAdminKey(kind: PanelKind, options: PanelClientOptions): Promise<{ client: AdminClient; totals: PanelTotals }> {
+	if (kind !== 'calagopus' && CLIENT_KEY_PREFIXES.some((prefix) => options.apiKey.startsWith(prefix))) {
+		throw new PanelError('validation', 'That is a client key. Create an application key in the admin area instead.');
+	}
+	const client = createAdminClient(kind, options);
+	return { client, totals: await client.getTotals() };
 }
 
 export interface DetectedPanel {

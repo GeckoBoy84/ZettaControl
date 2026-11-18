@@ -199,6 +199,109 @@ export interface PanelClient {
 	listCrashes(id: string): Promise<CrashLog[]>;
 }
 
+/** What an admin adapter can do. The bot hides actions that are false. */
+export interface AdminCapabilities {
+	/** Live CPU, memory and disk use per node, read through the panel. Without it the bot pings Wings itself. */
+	nodeStats: boolean;
+	suspendServers: boolean;
+	reinstallServers: boolean;
+	suspendUsers: boolean;
+}
+
+export interface PanelTotals {
+	users: number;
+	servers: number;
+	nodes: number;
+}
+
+export interface AdminNode {
+	id: string;
+	name: string;
+	description: string | null;
+	/** Where Wings listens, for example `https://node1.example.com:8080`. null when the panel does not say. */
+	wingsUrl: string | null;
+	maintenance: boolean;
+	/** Node capacity in MiB. 0 means not set. */
+	memoryMib: number;
+	diskMib: number;
+	/** The sum of the limits of the servers on the node, in MiB. null when the panel does not report it. */
+	allocated: { memoryMib: number; diskMib: number } | null;
+}
+
+/** Live node usage, from panels that read it from Wings for us. */
+export interface NodeStats {
+	version: string | null;
+	cpuPercent: number;
+	cpuThreads: number;
+	memoryUsedBytes: number;
+	memoryTotalBytes: number;
+	diskUsedBytes: number;
+	diskTotalBytes: number;
+	servers: { total: number; online: number } | null;
+}
+
+export interface AdminServer {
+	/** The ID the panel's admin API expects in URLs. */
+	id: string;
+	shortId: string;
+	name: string;
+	description: string | null;
+	owner: string | null;
+	node: string | null;
+	suspended: boolean;
+	/** Panel specific transitional status, for example `installing`. null when idle. */
+	status: string | null;
+	limits: ServerLimits;
+	createdAt: string | null;
+}
+
+export interface AdminUser {
+	/** The ID the panel's admin API expects in URLs. */
+	id: string;
+	username: string;
+	email: string;
+	admin: boolean;
+	/** null on panels without user suspension. */
+	suspended: boolean | null;
+	twoFactor: boolean;
+	createdAt: string | null;
+}
+
+/** One page of a list, plus how many items match in total. */
+export interface AdminPage<T> {
+	items: T[];
+	total: number;
+}
+
+export interface AdminListOptions {
+	search?: string;
+	perPage?: number;
+}
+
+/**
+ * The panel's admin API: Calagopus `/api/admin`, the application API elsewhere. Needs an
+ * admin key. Methods behind a capability that is false throw PanelError('unsupported').
+ */
+export interface AdminClient {
+	readonly kind: PanelKind;
+	readonly url: string;
+	readonly capabilities: AdminCapabilities;
+
+	getTotals(): Promise<PanelTotals>;
+	/** Every node, sorted by name. */
+	listNodes(): Promise<AdminNode[]>;
+	getNodeStats(nodeId: string): Promise<NodeStats>;
+
+	listServers(options?: AdminListOptions): Promise<AdminPage<AdminServer>>;
+	getServer(id: string): Promise<AdminServer>;
+	setServerSuspended(id: string, suspended: boolean): Promise<void>;
+	reinstallServer(id: string): Promise<void>;
+
+	listUsers(options?: AdminListOptions): Promise<AdminPage<AdminUser>>;
+	getUser(id: string): Promise<AdminUser>;
+	setUserSuspended(id: string, suspended: boolean): Promise<void>;
+}
+
 export interface PanelClientOptions {
 	url: string;
 	apiKey: string;

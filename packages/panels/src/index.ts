@@ -1,8 +1,13 @@
 export * from './types.ts';
 export { PanelError, type PanelErrorCode } from './errors.ts';
 export { normalisePanelUrl } from './http.ts';
-export { createPanelClient, detectPanel, type DetectedPanel } from './detect.ts';
+export { createAdminClient, createPanelClient, detectPanel, validateAdminKey, type DetectedPanel } from './detect.ts';
+export { pingWings, type WingsPing } from './wings.ts';
 export { CalagopusClient } from './calagopus.ts';
+export { CalagopusAdminClient } from './calagopus-admin.ts';
 export { Pterodactyl1Client } from './pterodactyl1.ts';
+export { Pterodactyl1AdminClient } from './pterodactyl1-admin.ts';
 export { Pterodactyl2Client } from './pterodactyl2.ts';
+export { Pterodactyl2AdminClient } from './pterodactyl2-admin.ts';
 export { PelicanClient } from './pelican.ts';
+export { PelicanAdminClient } from './pelican-admin.ts';
