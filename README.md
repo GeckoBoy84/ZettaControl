@@ -15,6 +15,8 @@ Built and hosted by [Zettako](https://zettako.net). Formerly PteroControl: v2 is
 - `/console open`: streams a server's console into a private thread. Send commands with a button, or by typing in the thread with `CONSOLE_TYPED_COMMANDS=true`.
 - `/status post`: a channel message that shows every server's state and updates every minute.
 - `/alerts add`: posts when a server goes offline, crashes (Calagopus crash log) or runs above a CPU, memory or disk threshold, with an optional role ping.
+- `/stats post`: a panel stats board, like a status page for the whole panel. Panel and node uptime, live node CPU, memory and disk on Calagopus, allocated resources elsewhere, and optional posts when the panel or a node goes down or comes back. A node only counts as down after two failed checks in a row.
+- `/admin`: with an admin key (`/admin key`), find any server or user on the panel, suspend or unsuspend servers, reinstall them, and suspend users on Calagopus. Only panel managers can use it.
 - Server autocomplete across every panel you can use.
 
 See [ROADMAP.md](ROADMAP.md) for what is coming.
@@ -52,7 +54,7 @@ npm start                 # same as: node index.js
 
 Create the bot at <https://discord.com/developers/applications>. Under **Installation**, enable both **Guild Install** and **User Install** so people can use it in DMs.
 
-**Discord permissions.** Slash commands need no permissions. Console threads, status boards and alerts post on their own, so for those the bot has to be in the server with the `bot` scope and these channel permissions:
+**Discord permissions.** Slash commands need no permissions. Console threads, status boards, panel stats boards and alerts post on their own, so for those the bot has to be in the server with the `bot` scope and these channel permissions:
 
 | Scope | Permissions |
 |---|---|
@@ -61,7 +63,9 @@ Create the bot at <https://discord.com/developers/applications>. Under **Install
 
 The bot links to an invite with exactly these when a live feature needs it. It only uses the `Guilds` intent. With `CONSOLE_TYPED_COMMANDS=true` it also uses `GuildMessages` and the privileged **Message Content** intent, which you switch on under **Bot** in the Developer Portal.
 
-If your panel is on your own network (for example `192.168.x.x`), set `ALLOW_PRIVATE_PANEL_URLS=true`.
+If your panel or its nodes are on your own network (for example `192.168.x.x`), set `ALLOW_PRIVATE_PANEL_URLS=true`. Without it, panel stats boards show nodes on private addresses as unknown instead of pinging them.
+
+**Admin keys.** `/admin` and `/stats` use the panel's admin API. On Pterodactyl and Pelican that needs an application key (admin area > Application API), set with `/admin key`. Give it read access to users, servers and nodes, and write access to servers if you want to suspend or reinstall from Discord. On Calagopus the linked key works if its account and key have admin permissions; `/admin key` can set a separate one.
 
 ## Development
 
