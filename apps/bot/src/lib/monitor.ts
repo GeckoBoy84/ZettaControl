@@ -11,6 +11,7 @@ import { ALL_SERVERS, alertRules, panels, statusBoards, type AlertRuleRow, type 
 import { logger } from '../logger.ts';
 import { renderAlert, renderStatusBoard, type BoardServer } from '../views/status-board.ts';
 import { evaluate, type ServerMemory } from './alert-state.ts';
+import { forEachLimit } from './concurrency.ts';
 import { clientFor, listServersCached } from './panels.ts';
 import { describeError } from './replies.ts';
 
@@ -160,15 +161,4 @@ async function sendAlert(rule: AlertRuleRow, payload: MessageCreateOptions): Pro
 			logger.warn({ err: error, rule: rule.id }, 'Could not send an alert');
 		}
 	}
-}
-
-async function forEachLimit<T>(items: T[], limit: number, run: (item: T) => Promise<void>): Promise<void> {
-	let next = 0;
-	const worker = async () => {
-		while (next < items.length) {
-			const item = items[next++] as T;
-			await run(item);
-		}
-	};
-	await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }

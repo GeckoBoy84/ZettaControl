@@ -8,6 +8,7 @@ import { emit, loadHooks } from './hooks.ts';
 import { logger } from './logger.ts';
 import { closeConsole, handleConsoleMessage, isConsoleThread, startConsoles } from './lib/consoles.ts';
 import { startMonitor } from './lib/monitor.ts';
+import { startPanelStats } from './lib/panel-stats.ts';
 import { routeInteraction } from './router.ts';
 
 // Everything a host needs happens on start, so no console commands are ever required.
@@ -44,6 +45,7 @@ client.once(Events.ClientReady, (ready) => {
 	logger.info({ user: ready.user.tag, guilds: ready.guilds.cache.size }, `${brand.name} is online`);
 	emit('onReady', ready);
 	startMonitor(ready);
+	startPanelStats(ready);
 	startConsoles(ready).catch((error: unknown) => logger.error({ err: error }, 'Could not start console threads'));
 });
 

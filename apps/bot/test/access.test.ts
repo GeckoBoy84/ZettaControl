@@ -14,6 +14,7 @@ function panel(overrides: Partial<PanelRow> = {}): PanelRow {
 		kind: 'calagopus',
 		url: 'https://panel.test',
 		apiKeyEncrypted: 'x',
+		adminKeyEncrypted: null,
 		panelUsername: 'koen',
 		createdBy: 'user-1',
 		createdAt: new Date(),

@@ -15,6 +15,13 @@
       "when": 1795034174625,
       "tag": "0001_live_features",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795037266087,
+      "tag": "0002_admin_and_panel_stats",
+      "breakpoints": true
     }
   ]
 }
