@@ -21,6 +21,12 @@ const schema = z.object({
 		.string()
 		.optional()
 		.transform((value) => value === 'true'),
+	// Lets people type console commands straight into console threads. Needs the privileged
+	// Message Content intent switched on in the Discord Developer Portal.
+	CONSOLE_TYPED_COMMANDS: z
+		.string()
+		.optional()
+		.transform((value) => value === 'true'),
 });
 
 export type Env = z.infer<typeof schema>;

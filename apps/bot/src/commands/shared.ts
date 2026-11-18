@@ -75,6 +75,34 @@ export async function serverAutocomplete(interaction: AutocompleteInteraction): 
 	await interaction.respond(choices);
 }
 
+/** Servers on a panel picked in an earlier option, for commands that choose a panel first. */
+export async function panelServerAutocomplete(interaction: AutocompleteInteraction, panel: PanelRow | undefined, extra: { name: string; value: string }[] = []): Promise<void> {
+	if (!panel) {
+		await interaction.respond([]);
+		return;
+	}
+	const query = interaction.options.getFocused().toLowerCase();
+	const servers = (await withTimeout(listServersCached(panel), AUTOCOMPLETE_BUDGET_MS).catch(() => null)) ?? [];
+	await interaction.respond(
+		[...extra, ...servers.map((server) => ({ name: truncate(server.name, 100), value: server.id }))]
+			.filter((choice) => !query || choice.name.toLowerCase().includes(query))
+			.slice(0, 25),
+	);
+}
+
+/**
+ * Status boards and alerts post for everyone in a channel, so only panel managers set
+ * them up, and only for panels they manage (this server's, or their own personal ones).
+ */
+export async function requireLivePanel(actor: Actor, panelId: string): Promise<PanelRow> {
+	if (!actor.isManager) {
+		throw new UserFacingError('Only panel managers can set this up: members with Manage Server, or a manager role set with `/access managers`.');
+	}
+	const panel = (await managedPanels(actor)).find((row) => row.id === panelId);
+	if (!panel) throw new UserFacingError('Pick a panel from the list.');
+	return panel;
+}
+
 export function panelChoiceName(panel: PanelRow): string {
 	const owner = panel.scope === 'guild' ? 'this server' : 'personal';
 	return truncate(`${panel.name} - ${PANEL_KIND_LABELS[panel.kind]}, ${owner}`, 100);

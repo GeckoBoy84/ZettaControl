@@ -13,9 +13,9 @@ import {
 	type Actor,
 } from '../lib/access.ts';
 import { truncate } from '../lib/format.ts';
-import { clientFor, listServersCached } from '../lib/panels.ts';
+import { clientFor } from '../lib/panels.ts';
 import { embed, UserFacingError } from '../lib/replies.ts';
-import { guildSlashCommand, managedPanelAutocomplete, withTimeout } from './shared.ts';
+import { guildSlashCommand, managedPanelAutocomplete, panelServerAutocomplete } from './shared.ts';
 
 const isGuildPanel = (panel: PanelRow) => panel.scope === 'guild';
 
@@ -36,19 +36,8 @@ function target(grant: { serverId: string; serverName: string | null }): string 
 
 async function serverAutocomplete(interaction: AutocompleteInteraction, actor: Actor): Promise<void> {
 	const panelId = interaction.options.getString('panel');
-	const panel = panelId && actor.isManager ? (await managedPanels(actor)).find((row) => row.id === panelId && isGuildPanel(row)) : null;
-	if (!panel) {
-		await interaction.respond([]);
-		return;
-	}
-	const query = interaction.options.getFocused().toLowerCase();
-	const servers = (await withTimeout(listServersCached(panel), 2_500).catch(() => null)) ?? [];
-	await interaction.respond(
-		servers
-			.filter((server) => !query || server.name.toLowerCase().includes(query))
-			.slice(0, 25)
-			.map((server) => ({ name: truncate(server.name, 100), value: server.id })),
-	);
+	const panel = panelId && actor.isManager ? (await managedPanels(actor)).find((row) => row.id === panelId && isGuildPanel(row)) : undefined;
+	await panelServerAutocomplete(interaction, panel);
 }
 
 export const accessCommand: Command = {

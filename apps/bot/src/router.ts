@@ -1,10 +1,14 @@
 import type { Interaction } from 'discord.js';
 import { aboutCommand } from './commands/about.ts';
 import { accessCommand } from './commands/access.ts';
+import { alertsCommand } from './commands/alerts.ts';
+import { consoleCommand } from './commands/console.ts';
 import { helpCommand } from './commands/help.ts';
 import { panelCommand } from './commands/panel.ts';
 import { serverCommand } from './commands/server.ts';
+import { statusCommand } from './commands/status.ts';
 import { backupsHandler } from './components/backups.ts';
+import { consoleHandler } from './components/console.ts';
 import { databasesHandler } from './components/databases.ts';
 import { filesHandler } from './components/files.ts';
 import { panelLinkHandler } from './components/panel-link.ts';
@@ -16,7 +20,16 @@ import { unpackArg, type Command, type ComponentHandler } from './interactions.t
 import { describeError, replyError } from './lib/replies.ts';
 import { logger } from './logger.ts';
 
-export const commands: Command[] = [serverCommand, panelCommand, accessCommand, helpCommand, aboutCommand];
+export const commands: Command[] = [
+	serverCommand,
+	panelCommand,
+	accessCommand,
+	consoleCommand,
+	statusCommand,
+	alertsCommand,
+	helpCommand,
+	aboutCommand,
+];
 const componentHandlers: ComponentHandler[] = [
 	panelLinkHandler,
 	serverViewHandler,
@@ -25,6 +38,7 @@ const componentHandlers: ComponentHandler[] = [
 	schedulesHandler,
 	databasesHandler,
 	startupHandler,
+	consoleHandler,
 ];
 
 const commandsByName = new Map(commands.map((command) => [command.data.name, command]));
