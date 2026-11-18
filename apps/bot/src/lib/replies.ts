@@ -1,4 +1,11 @@
-import { EmbedBuilder, MessageFlags, type RepliableInteraction } from 'discord.js';
+import {
+	EmbedBuilder,
+	MessageFlags,
+	type InteractionEditReplyOptions,
+	type MessageComponentInteraction,
+	type ModalSubmitInteraction,
+	type RepliableInteraction,
+} from 'discord.js';
 import { PanelError, type PanelErrorCode } from '@zettako/panels';
 import { brand } from '../brand.ts';
 
@@ -46,4 +53,24 @@ export async function replyError(interaction: RepliableInteraction, message: str
 	} else {
 		await interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 	}
+}
+
+/**
+ * Acknowledges a button, select or modal (opened from a message) and replaces that
+ * message with what `build` returns. Building happens after the acknowledgement, so
+ * slow panels do not hit Discord's 3 second limit.
+ */
+export async function updateMessage(
+	interaction: MessageComponentInteraction | ModalSubmitInteraction,
+	build: () => Promise<InteractionEditReplyOptions>,
+): Promise<void> {
+	if (interaction.isMessageComponent() || interaction.isFromMessage()) await interaction.deferUpdate();
+	else await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+	await interaction.editReply(await build());
+}
+
+/** A separate ephemeral answer, for secrets and links that should not replace the view. */
+export async function answerPrivately(interaction: RepliableInteraction, build: () => Promise<string>): Promise<void> {
+	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+	await interaction.editReply({ embeds: [embed().setDescription(await build())] });
 }

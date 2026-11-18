@@ -12,8 +12,10 @@ import type { PowerAction } from '@zettako/panels';
 import { resolveServer } from '../commands/shared.ts';
 import type { AccessLevel } from '../db/schema.ts';
 import { customId, type ComponentHandler } from '../interactions.ts';
-import { embed } from '../lib/replies.ts';
+import { embed, updateMessage } from '../lib/replies.ts';
 import { serverRef } from '../lib/panels.ts';
+import { renderSection } from '../views/render-section.ts';
+import { isSectionName } from '../views/sections.ts';
 import { renderServerView, SERVER_PREFIX } from '../views/server.ts';
 
 const POWER_ACTIONS: readonly PowerAction[] = ['start', 'stop', 'restart', 'kill'];
@@ -24,19 +26,26 @@ export const serverViewHandler: ComponentHandler = {
 	prefix: SERVER_PREFIX,
 
 	async handle(interaction, [action, panelId = '', serverId = '', extra]) {
-		const needed: AccessLevel = action === 'refresh' ? 'view' : action === 'cmd' || action === 'cmdsubmit' ? 'full' : 'power';
-		const { panel, client, level } = await resolveServer(interaction, serverRef(panelId, serverId), needed);
+		const needed: AccessLevel = action === 'refresh' || action === 'section' ? 'view' : action === 'cmd' || action === 'cmdsubmit' ? 'full' : 'power';
+		const ctx = await resolveServer(interaction, serverRef(panelId, serverId), needed);
+		const { panel, client, level } = ctx;
 
 		const rerender = async (notice?: string) => {
 			const [server, resources] = await Promise.all([client.getServer(serverId), client.getResources(serverId).catch(() => null)]);
-			return renderServerView({ panel, server, resources, level, notice });
+			return renderServerView({ panel, server, resources, level, capabilities: client.capabilities, notice });
 		};
 
 		switch (action) {
+			case 'section': {
+				const name = interaction.isStringSelectMenu() ? (interaction.values[0] ?? '') : '';
+				if (!isSectionName(name)) return;
+				await updateMessage(interaction, () => renderSection(name, ctx));
+				return;
+			}
+
 			case 'refresh': {
 				if (!interaction.isButton()) return;
-				await interaction.deferUpdate();
-				await interaction.editReply(await rerender());
+				await updateMessage(interaction, () => rerender());
 				return;
 			}
 

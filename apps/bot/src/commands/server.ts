@@ -2,6 +2,8 @@ import { MessageFlags } from 'discord.js';
 import type { PowerAction } from '@zettako/panels';
 import type { Command } from '../interactions.ts';
 import { embed } from '../lib/replies.ts';
+import { renderSection } from '../views/render-section.ts';
+import { isSectionName, SECTIONS, type SectionName } from '../views/sections.ts';
 import { renderServerView } from '../views/server.ts';
 import { resolveServer, serverAutocomplete, slashCommand } from './shared.ts';
 
@@ -12,39 +14,51 @@ const POWER_LABELS: Record<PowerAction, string> = {
 	kill: 'Kill',
 };
 
+const data = slashCommand('server', 'Control your game servers')
+	.addSubcommand((sub) =>
+		sub
+			.setName('view')
+			.setDescription('Live stats and controls for a server')
+			.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true)),
+	)
+	.addSubcommand((sub) =>
+		sub
+			.setName('power')
+			.setDescription('Start, stop, restart or kill a server')
+			.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true))
+			.addStringOption((option) =>
+				option
+					.setName('action')
+					.setDescription('What to do')
+					.setRequired(true)
+					.addChoices(
+						{ name: 'Start', value: 'start' },
+						{ name: 'Restart', value: 'restart' },
+						{ name: 'Stop', value: 'stop' },
+						{ name: 'Kill (force stop)', value: 'kill' },
+					),
+			),
+	)
+	.addSubcommand((sub) =>
+		sub
+			.setName('command')
+			.setDescription('Send a console command to a server')
+			.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true))
+			.addStringOption((option) => option.setName('command').setDescription('Console command').setRequired(true).setMaxLength(500)),
+	);
+
+// One subcommand per section, so `/server files` opens Files straight away.
+for (const name of Object.keys(SECTIONS) as SectionName[]) {
+	data.addSubcommand((sub) =>
+		sub
+			.setName(name)
+			.setDescription(SECTIONS[name].description)
+			.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true)),
+	);
+}
+
 export const serverCommand: Command = {
-	data: slashCommand('server', 'Control your game servers')
-		.addSubcommand((sub) =>
-			sub
-				.setName('view')
-				.setDescription('Live stats and controls for a server')
-				.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true)),
-		)
-		.addSubcommand((sub) =>
-			sub
-				.setName('power')
-				.setDescription('Start, stop, restart or kill a server')
-				.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true))
-				.addStringOption((option) =>
-					option
-						.setName('action')
-						.setDescription('What to do')
-						.setRequired(true)
-						.addChoices(
-							{ name: 'Start', value: 'start' },
-							{ name: 'Restart', value: 'restart' },
-							{ name: 'Stop', value: 'stop' },
-							{ name: 'Kill (force stop)', value: 'kill' },
-						),
-				),
-		)
-		.addSubcommand((sub) =>
-			sub
-				.setName('command')
-				.setDescription('Send a console command to a server')
-				.addStringOption((option) => option.setName('server').setDescription('Server').setRequired(true).setAutocomplete(true))
-				.addStringOption((option) => option.setName('command').setDescription('Console command').setRequired(true).setMaxLength(500)),
-		),
+	data,
 
 	async autocomplete(interaction) {
 		await serverAutocomplete(interaction);
@@ -53,13 +67,19 @@ export const serverCommand: Command = {
 	async execute(interaction) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 		const sub = interaction.options.getSubcommand();
-		const needed = sub === 'power' ? 'power' : sub === 'command' ? 'full' : 'view';
-		const { panel, client, serverId, level } = await resolveServer(interaction, interaction.options.getString('server', true), needed);
+		const needed = sub === 'power' ? 'power' : sub === 'command' ? 'full' : isSectionName(sub) ? SECTIONS[sub].level : 'view';
+		const ctx = await resolveServer(interaction, interaction.options.getString('server', true), needed);
+		const { panel, client, serverId, level } = ctx;
+
+		if (isSectionName(sub)) {
+			await interaction.editReply(await renderSection(sub, ctx));
+			return;
+		}
 
 		switch (sub) {
 			case 'view': {
 				const [server, resources] = await Promise.all([client.getServer(serverId), client.getResources(serverId).catch(() => null)]);
-				await interaction.editReply(renderServerView({ panel, server, resources, level }));
+				await interaction.editReply(renderServerView({ panel, server, resources, level, capabilities: client.capabilities }));
 				return;
 			}
 			case 'power': {

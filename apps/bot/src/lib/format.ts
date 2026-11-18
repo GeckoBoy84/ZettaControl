@@ -34,3 +34,14 @@ export function formatUptime(ms: number): string {
 export function truncate(text: string, max: number): string {
 	return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
 }
+
+/** A Discord timestamp, shown in each viewer's own time zone. */
+export function discordTime(iso: string | null, style: 'R' | 'f' | 'd' = 'R'): string {
+	if (!iso) return '-';
+	const ms = Date.parse(iso);
+	return Number.isNaN(ms) ? '-' : `<t:${Math.floor(ms / 1000)}:${style}>`;
+}
+
+export function plural(count: number, word: string): string {
+	return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
