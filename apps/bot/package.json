@@ -10,6 +10,7 @@
     "deploy-commands": "node --env-file-if-exists=../../.env src/deploy-commands.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=../../.env src/db/migrate.ts",
+    "brand:logos": "node scripts/render-logos.mjs",
     "tutorial:images": "node scripts/render-tutorial-images.mjs"
   },
   "dependencies": {
