@@ -31,9 +31,13 @@ export function guildContext(interaction: Interaction): string | null {
 	return owners[ApplicationIntegrationType.GuildInstall] === interaction.guildId ? interaction.guildId : null;
 }
 
-function memberRoleIds(member: GuildMember | APIInteractionGuildMember | null): string[] {
-	if (!member) return [];
-	return Array.isArray(member.roles) ? member.roles : [...member.roles.cache.keys()];
+/**
+ * Role IDs including @everyone (whose ID is the guild ID), so `/access grant` to @everyone
+ * works. Interaction payloads leave @everyone out of the member's roles.
+ */
+function memberRoleIds(guildId: string, member: GuildMember | APIInteractionGuildMember | null): string[] {
+	const roles = !member ? [] : Array.isArray(member.roles) ? member.roles : [...member.roles.cache.keys()];
+	return [guildId, ...roles.filter((id) => id !== guildId)];
 }
 
 const managerRoleCache = new Map<string, { expires: number; roleIds: string[] }>();
@@ -59,12 +63,24 @@ export async function setManagerRoleIds(guildId: string, roleIds: string[]): Pro
 
 export async function resolveActor(interaction: Interaction): Promise<Actor> {
 	const guildId = guildContext(interaction);
-	const roleIds = guildId ? memberRoleIds(interaction.member) : [];
+	const roleIds = guildId ? memberRoleIds(guildId, interaction.member) : [];
 	const hasManageServer =
 		guildId !== null &&
 		(interaction.memberPermissions?.any([PermissionFlagsBits.ManageGuild, PermissionFlagsBits.Administrator]) ?? false);
 	const isManager = hasManageServer || (guildId !== null && (await managerRoleIds(guildId)).some((id) => roleIds.includes(id)));
 	return { userId: interaction.user.id, guildId, roleIds, hasManageServer, isManager };
+}
+
+/**
+ * The actor behind a message in a guild the bot is a member of, for console threads
+ * where people type commands instead of using an interaction.
+ */
+export async function actorFromMember(member: GuildMember): Promise<Actor> {
+	const guildId = member.guild.id;
+	const roleIds = memberRoleIds(guildId, member);
+	const hasManageServer = member.permissions.any([PermissionFlagsBits.ManageGuild, PermissionFlagsBits.Administrator]);
+	const isManager = hasManageServer || (await managerRoleIds(guildId)).some((id) => roleIds.includes(id));
+	return { userId: member.id, guildId, roleIds, hasManageServer, isManager };
 }
 
 /** Panels the actor can use at all here, with their access. */
