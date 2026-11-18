@@ -10,6 +10,8 @@ export interface RequestOptions {
 	method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 	query?: Record<string, string | number | boolean | undefined>;
 	body?: unknown;
+	/** Sent as text/plain instead of a JSON body. */
+	text?: string;
 }
 
 /** Strips trailing slashes and a pasted `/api...` suffix, and requires http(s). */
@@ -46,7 +48,16 @@ export class HttpClient {
 		this.#parseErrors = parseErrors;
 	}
 
-	async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+	request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+		return this.#send(path, options, (response) => this.#handle<T>(response));
+	}
+
+	/** For endpoints that answer with raw text, such as file contents. */
+	requestText(path: string, options: RequestOptions = {}): Promise<string> {
+		return this.#send(path, options, (response) => this.#handleText(response));
+	}
+
+	async #send<T>(path: string, options: RequestOptions, handle: (response: Response) => Promise<T>): Promise<T> {
 		const url = new URL(this.baseUrl + path);
 		for (const [key, value] of Object.entries(options.query ?? {})) {
 			if (value !== undefined) url.searchParams.set(key, String(value));
@@ -58,7 +69,7 @@ export class HttpClient {
 				await sleep(retryAfterMs(response));
 				continue;
 			}
-			return this.#handle<T>(response);
+			return handle(response);
 		}
 	}
 
@@ -69,12 +80,13 @@ export class HttpClient {
 			'User-Agent': this.#userAgent,
 		};
 		if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+		if (options.text !== undefined) headers['Content-Type'] = 'text/plain';
 
 		try {
 			return await fetch(url, {
 				method: options.method ?? 'GET',
 				headers,
-				body: options.body === undefined ? undefined : JSON.stringify(options.body),
+				body: options.text ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
 				signal: AbortSignal.timeout(this.#timeoutMs),
 				redirect: 'error',
 			});
@@ -104,8 +116,24 @@ export class HttpClient {
 			return body as T;
 		}
 
+		throw this.#error(response.status, body);
+	}
+
+	async #handleText(response: Response): Promise<string> {
+		const text = await response.text();
+		if (response.ok) return text;
+		let body: unknown = null;
+		try {
+			body = JSON.parse(text);
+		} catch {
+			// Not JSON, so there are no details to show.
+		}
+		throw this.#error(response.status, body);
+	}
+
+	#error(status: number, body: unknown): PanelError {
 		const details = body === null ? [] : this.#parseErrors(body);
-		throw new PanelError(codeForStatus(response.status), details[0] ?? `The panel returned HTTP ${response.status}.`, response.status, details);
+		return new PanelError(codeForStatus(status), details[0] ?? `The panel returned HTTP ${status}.`, status, details);
 	}
 }
 

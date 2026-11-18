@@ -117,6 +117,74 @@ describe('CalagopusClient', () => {
 	});
 });
 
+describe('panel depth', () => {
+	it('reads and writes files as plain text on Calagopus', async () => {
+		let written: { type: string | undefined; body: unknown } | null = null;
+		mockFetch((url, init) => {
+			if (url.pathname.endsWith('/files/contents')) {
+				assert.equal(url.searchParams.get('file'), '/server.properties');
+				return { body: 'motd=hello' };
+			}
+			written = { type: (init.headers as Record<string, string>)['Content-Type'], body: init.body };
+			return { body: {} };
+		});
+		const client = new CalagopusClient({ url: 'https://panel.test', apiKey: 'k' });
+		// The mock JSON encodes bodies, so the text comes back quoted.
+		assert.equal(await client.readFile('uuid-1', '/server.properties'), '"motd=hello"');
+		await client.writeFile('uuid-1', '/server.properties', 'motd=bye');
+		assert.deepEqual(written, { type: 'text/plain', body: 'motd=bye' });
+	});
+
+	it('walks Calagopus pages for file lists', async () => {
+		mockFetch((url) => {
+			const page = Number(url.searchParams.get('page'));
+			const entry = { name: `f${page}`, directory: page === 1, size: 10, modified: null };
+			return { body: { entries: { total: 101, per_page: 100, page, data: [entry] } } };
+		});
+		const files = await new CalagopusClient({ url: 'https://panel.test', apiKey: 'k' }).listFiles('uuid-1', '/');
+		assert.deepEqual(
+			files.map((file) => [file.name, file.directory]),
+			[
+				['f1', true],
+				['f2', false],
+			],
+		);
+	});
+
+	it('maps Pterodactyl backups and execute schedules', async () => {
+		const calls: string[] = [];
+		mockFetch((url, init) => {
+			calls.push(`${init.method} ${url.pathname}`);
+			if (url.pathname.endsWith('/backups')) {
+				return {
+					body: {
+						object: 'list',
+						data: [
+							{
+								object: 'backup',
+								attributes: { uuid: 'b1', name: 'Nightly', is_successful: true, is_locked: false, bytes: 2048, created_at: 'x', completed_at: 'y' },
+							},
+						],
+					},
+				};
+			}
+			return { body: undefined };
+		});
+		const client = new Pterodactyl1Client({ url: 'https://panel.test', apiKey: 'k' });
+		assert.deepEqual(await client.listBackups('abc'), [
+			{ id: 'b1', name: 'Nightly', bytes: 2048, successful: true, locked: false, createdAt: 'x', completedAt: 'y' },
+		]);
+		await client.runSchedule('abc', '7');
+		assert.deepEqual(calls, ['GET /api/client/servers/abc/backups', 'POST /api/client/servers/abc/schedules/7/execute']);
+	});
+
+	it('marks crash logs unsupported outside Calagopus', async () => {
+		const client = new Pterodactyl1Client({ url: 'https://panel.test', apiKey: 'k' });
+		assert.equal(client.capabilities.crashLogs, false);
+		await assert.rejects(client.listCrashes('abc'), (error: unknown) => error instanceof PanelError && error.code === 'unsupported');
+	});
+});
+
 describe('detectPanel', () => {
 	it('detects Calagopus from the account shape', async () => {
 		mockFetch(() => ({ body: { user: { uuid: 'u', username: 'koen', email: 'k@example.com', admin: false } } }));
