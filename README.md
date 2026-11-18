@@ -11,6 +11,10 @@ Built and hosted by [Zettako](https://zettako.net). Formerly PteroControl: v2 is
 - Panels for **just you** (usable in DMs and any server, including as a user-installed app) or for a **whole Discord server**.
 - Role based access for server panels: Manage Server is a manager by default, `/access managers` adds manager roles, and `/access grant` gives any role View, Power or Full access to a whole panel or to single game servers.
 - `/server view`: live CPU, memory, disk, network and uptime with start, restart, stop, kill and console command buttons.
+- Panel depth from the server view's **More** menu or `/server <section>`: backups (create, restore, download, delete), files (browse, read, edit, download), schedules (run now), databases (connection details, show or rotate the password), network, subusers and startup variables. Each panel shows only what its API supports.
+- `/console open`: streams a server's console into a private thread. Send commands with a button, or by typing in the thread with `CONSOLE_TYPED_COMMANDS=true`.
+- `/status post`: a channel message that shows every server's state and updates every minute.
+- `/alerts add`: posts when a server goes offline, crashes (Calagopus crash log) or runs above a CPU, memory or disk threshold, with an optional role ping.
 - Server autocomplete across every panel you can use.
 
 See [ROADMAP.md](ROADMAP.md) for what is coming.
@@ -47,6 +51,15 @@ npm start                 # same as: node index.js
 ```
 
 Create the bot at <https://discord.com/developers/applications>. Under **Installation**, enable both **Guild Install** and **User Install** so people can use it in DMs.
+
+**Discord permissions.** Slash commands need no permissions. Console threads, status boards and alerts post on their own, so for those the bot has to be in the server with the `bot` scope and these channel permissions:
+
+| Scope | Permissions |
+|---|---|
+| Guild Install | `applications.commands`, `bot` with View Channel, Send Messages, Embed Links, Create Private Threads, Send Messages in Threads (permissions integer `343597403136`) |
+| User Install | `applications.commands` |
+
+The bot links to an invite with exactly these when a live feature needs it. It only uses the `Guilds` intent. With `CONSOLE_TYPED_COMMANDS=true` it also uses `GuildMessages` and the privileged **Message Content** intent, which you switch on under **Bot** in the Developer Portal.
 
 If your panel is on your own network (for example `192.168.x.x`), set `ALLOW_PRIVATE_PANEL_URLS=true`.
 

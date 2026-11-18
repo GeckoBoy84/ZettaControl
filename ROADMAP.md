@@ -12,15 +12,17 @@
 - [ ] Test against live panels of each type
 - [ ] Docker image and Calagopus egg for hosting
 
-## Phase 2: Panel depth
+## Phase 2: Panel depth (done)
 
-Backups, files, schedules, databases, subusers, network and startup variables. Each adapter declares what it supports and the bot hides the rest.
+- [x] Backups, files, schedules, databases, subusers, network and startup variables. Each adapter declares what it supports and the bot hides the rest.
+- [ ] Test each section against live Pterodactyl and Pelican panels
 
-## Phase 3: Live features
+## Phase 3: Live features (done)
 
-- Console threads: stream the server console into a thread and send what is typed there as commands
-- Status boards: a channel message that keeps every server's state up to date
-- Alerts: crash, offline and high resource notifications (Calagopus webhooks where available, polling elsewhere)
+- [x] Console threads: stream the server console into a private thread and send what is typed there as commands (`CONSOLE_TYPED_COMMANDS`, else a button)
+- [x] Status boards: a channel message that keeps every server's state up to date
+- [x] Alerts: crash, offline and high resource notifications. Polling on every panel, plus the Calagopus crash log
+- [ ] Calagopus webhooks instead of polling. Needs a public HTTP endpoint on the bot and keys with webhook permissions
 
 ## Phase 4: Admin
 
