@@ -3,16 +3,17 @@
   "version": "2.0.0-alpha.0",
   "private": true,
   "type": "module",
+  "main": "index.js",
   "license": "AGPL-3.0-only",
   "engines": {
-    "node": ">=26"
+    "node": ">=25.9.0"
   },
   "workspaces": [
     "packages/*",
     "apps/*"
   ],
   "scripts": {
-    "start": "npm run start -w @zettako/bot",
+    "start": "node index.js",
     "dev": "npm run dev -w @zettako/bot",
     "deploy-commands": "npm run deploy-commands -w @zettako/bot",
     "db:generate": "npm run db:generate -w @zettako/bot",
@@ -21,7 +22,7 @@
     "test": "node --test \"packages/*/test/**/*.test.ts\" \"apps/*/test/**/*.test.ts\""
   },
   "devDependencies": {
-    "@types/node": "^26.6.6",
+    "@types/node": "^25.9.9",
     "typescript": "^7.0.2"
   }
 }
