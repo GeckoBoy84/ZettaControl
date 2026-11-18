@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { brand, zettako } from '../brand.ts';
 import { accessCommand } from './access.ts';
+import { adminCommand } from './admin.ts';
 import { alertsCommand } from './alerts.ts';
 import { consoleCommand } from './console.ts';
 import type { Command } from '../interactions.ts';
@@ -8,6 +9,7 @@ import { embed } from '../lib/replies.ts';
 import { panelCommand } from './panel.ts';
 import { serverCommand } from './server.ts';
 import { slashCommand } from './shared.ts';
+import { statsCommand } from './stats.ts';
 import { statusCommand } from './status.ts';
 
 /** Lists every subcommand of the given commands straight from their definitions. */
@@ -47,7 +49,10 @@ export const helpCommand: Command = {
 							describe([serverCommand, panelCommand, accessCommand]),
 							'',
 							'**Live in your channels** (needs the bot added to the server)',
-							describe([consoleCommand, statusCommand, alertsCommand]),
+							describe([consoleCommand, statusCommand, alertsCommand, statsCommand]),
+							'',
+							'**Panel admins** (needs an admin key, set with `/admin key`)',
+							describe([adminCommand]),
 							'',
 							'Found a bug or have an idea? `/feedback`',
 						].join('\n'),

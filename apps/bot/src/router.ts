@@ -1,5 +1,6 @@
 import type { Interaction } from 'discord.js';
 import { aboutCommand } from './commands/about.ts';
+import { adminCommand } from './commands/admin.ts';
 import { accessCommand } from './commands/access.ts';
 import { alertsCommand } from './commands/alerts.ts';
 import { consoleCommand } from './commands/console.ts';
@@ -7,8 +8,10 @@ import { feedbackCommand } from './commands/feedback.ts';
 import { helpCommand } from './commands/help.ts';
 import { panelCommand } from './commands/panel.ts';
 import { serverCommand } from './commands/server.ts';
+import { statsCommand } from './commands/stats.ts';
 import { statusCommand } from './commands/status.ts';
 import { tutorialCommand } from './commands/tutorial.ts';
+import { adminHandler } from './components/admin.ts';
 import { backupsHandler } from './components/backups.ts';
 import { consoleHandler } from './components/console.ts';
 import { databasesHandler } from './components/databases.ts';
@@ -31,6 +34,8 @@ export const commands: Command[] = [
 	consoleCommand,
 	statusCommand,
 	alertsCommand,
+	statsCommand,
+	adminCommand,
 	helpCommand,
 	tutorialCommand,
 	feedbackCommand,
@@ -47,6 +52,7 @@ const componentHandlers: ComponentHandler[] = [
 	consoleHandler,
 	tutorialHandler,
 	feedbackHandler,
+	adminHandler,
 ];
 
 const commandsByName = new Map(commands.map((command) => [command.data.name, command]));

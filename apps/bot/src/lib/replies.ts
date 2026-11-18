@@ -45,6 +45,14 @@ export function describeError(error: unknown): string {
 	return 'Something went wrong. If it keeps happening, let us know in the support server.';
 }
 
+/** describeError for admin API calls, whose key is set with /admin key rather than /panel add. */
+export function describeAdminError(error: unknown): string {
+	if (error instanceof PanelError && (error.code === 'unauthorized' || error.code === 'forbidden')) {
+		return 'The panel rejected the admin key, or the key is not allowed to do that. Set a new one with `/admin key`.';
+	}
+	return describeError(error);
+}
+
 /** Replies or edits depending on the interaction's state. Always ephemeral. */
 export async function replyError(interaction: RepliableInteraction, message: string): Promise<void> {
 	const payload = { embeds: [errorEmbed(message)], components: [] };

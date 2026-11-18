@@ -1,4 +1,4 @@
-import { createPanelClient, type PanelClient, type ServerSummary } from '@zettako/panels';
+import { createAdminClient, createPanelClient, type AdminClient, type PanelClient, type ServerSummary } from '@zettako/panels';
 import { brand } from '../brand.ts';
 import type { PanelRow } from '../db/schema.ts';
 import { decryptSecret } from './crypto.ts';
@@ -9,6 +9,31 @@ import { decryptSecret } from './crypto.ts';
 const SERVER_CACHE_TTL_MS = 30_000;
 
 const clients = new Map<string, { updatedAt: number; client: PanelClient }>();
+const adminClients = new Map<string, { updatedAt: number; client: AdminClient }>();
+
+/** Additional data for the admin key, so it cannot be swapped with the client key. */
+export function adminKeyAad(panelId: string): string {
+	return `${panelId}:admin`;
+}
+
+/**
+ * Whether the panel has an admin key. Calagopus keys carry admin permissions themselves,
+ * so a Calagopus panel uses its client key when no separate admin key is set.
+ */
+export function hasAdminKey(panel: PanelRow): boolean {
+	return panel.adminKeyEncrypted !== null || panel.kind === 'calagopus';
+}
+
+export function adminClientFor(panel: PanelRow): AdminClient | null {
+	if (!hasAdminKey(panel)) return null;
+	const cached = adminClients.get(panel.id);
+	if (cached && cached.updatedAt === panel.updatedAt.getTime()) return cached.client;
+
+	const apiKey = panel.adminKeyEncrypted ? decryptSecret(panel.adminKeyEncrypted, adminKeyAad(panel.id)) : decryptSecret(panel.apiKeyEncrypted, panel.id);
+	const client = createAdminClient(panel.kind, { url: panel.url, apiKey, userAgent: `${brand.name} (+${brand.source})` });
+	adminClients.set(panel.id, { updatedAt: panel.updatedAt.getTime(), client });
+	return client;
+}
 
 export function clientFor(panel: PanelRow): PanelClient {
 	const cached = clients.get(panel.id);
@@ -25,6 +50,7 @@ export function clientFor(panel: PanelRow): PanelClient {
 
 export function forgetClient(panelId: string): void {
 	clients.delete(panelId);
+	adminClients.delete(panelId);
 	serverCache.delete(panelId);
 }
 

@@ -32,19 +32,24 @@ for (const [network, prefix] of [
 	blocked.addSubnet(network, prefix, 'ipv6');
 }
 
-export async function assertPublicUrl(url: string): Promise<void> {
-	if (env.ALLOW_PRIVATE_PANEL_URLS) return;
+/**
+ * Where a URL points. Also used for Wings addresses, which come from the panel rather
+ * than the user but are just as able to point inside the bot's network.
+ */
+export async function checkUrl(url: string): Promise<'public' | 'private' | 'unresolved'> {
+	if (env.ALLOW_PRIVATE_PANEL_URLS) return 'public';
 
 	const hostname = new URL(url).hostname.replace(/^\[|\]$/g, '');
-	const addresses = isIP(hostname)
-		? [{ address: hostname, family: isIP(hostname) }]
-		: await lookup(hostname, { all: true }).catch(() => {
-				throw new UserFacingError(`Could not find **${hostname}**. Check the panel URL.`);
-			});
+	const addresses = isIP(hostname) ? [{ address: hostname, family: isIP(hostname) }] : await lookup(hostname, { all: true }).catch(() => null);
+	if (!addresses) return 'unresolved';
+	return addresses.some(({ address, family }) => blocked.check(address, family === 6 ? 'ipv6' : 'ipv4')) ? 'private' : 'public';
+}
 
-	for (const { address, family } of addresses) {
-		if (blocked.check(address, family === 6 ? 'ipv6' : 'ipv4')) {
+export async function assertPublicUrl(url: string): Promise<void> {
+	switch (await checkUrl(url)) {
+		case 'unresolved':
+			throw new UserFacingError(`Could not find **${new URL(url).hostname}**. Check the panel URL.`);
+		case 'private':
 			throw new UserFacingError('That panel URL points to a private or local address, which this bot cannot reach.');
-		}
 	}
 }

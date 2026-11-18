@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import type { PanelKind } from '@zettako/panels';
 
 /**
@@ -19,6 +19,11 @@ export const panels = pgTable(
 		url: text('url').notNull(),
 		/** AES-256-GCM, see lib/crypto.ts. Never log or return this. */
 		apiKeyEncrypted: text('api_key_encrypted').notNull(),
+		/**
+		 * Optional application (admin) key for /admin and /stats, encrypted with `<id>:admin`
+		 * as additional data. Calagopus falls back to apiKeyEncrypted. Never log or return this.
+		 */
+		adminKeyEncrypted: text('admin_key_encrypted'),
 		/** Panel username the key belongs to, shown so people know which account is linked. */
 		panelUsername: text('panel_username').notNull(),
 		createdBy: text('created_by').notNull(),
@@ -133,8 +138,44 @@ export const alertRules = pgTable(
 	(table) => [index('alert_rules_guild_idx').on(table.guildId)],
 );
 
+/** Whether something was up, since when, and how many checks in a row disagreed. See lib/stats-state.ts. */
+export interface TrackedStatus {
+	online: boolean;
+	since: string;
+	misses: number;
+	missSince: string | null;
+}
+
+export interface PanelStatsState {
+	panel: TrackedStatus | null;
+	nodes: Record<string, TrackedStatus & { name: string }>;
+}
+
+/** A channel message with panel and node uptime and usage, kept up to date. See lib/panel-stats.ts. */
+export const panelStatsBoards = pgTable(
+	'panel_stats_boards',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		guildId: text('guild_id').notNull(),
+		channelId: text('channel_id').notNull(),
+		messageId: text('message_id').notNull().unique(),
+		panelId: uuid('panel_id')
+			.notNull()
+			.references(() => panels.id, { onDelete: 'cascade' }),
+		/** Where to post when the panel or a node goes down or comes back. null for no alerts. */
+		alertChannelId: text('alert_channel_id'),
+		mentionRoleId: text('mention_role_id'),
+		/** Kept here so "online since" and pending outages survive a restart. */
+		state: jsonb('state').$type<PanelStatsState>(),
+		createdBy: text('created_by').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index('panel_stats_boards_guild_idx').on(table.guildId)],
+);
+
 export type PanelRow = typeof panels.$inferSelect;
 export type RoleGrantRow = typeof roleGrants.$inferSelect;
 export type ConsoleThreadRow = typeof consoleThreads.$inferSelect;
 export type StatusBoardRow = typeof statusBoards.$inferSelect;
 export type AlertRuleRow = typeof alertRules.$inferSelect;
+export type PanelStatsBoardRow = typeof panelStatsBoards.$inferSelect;
