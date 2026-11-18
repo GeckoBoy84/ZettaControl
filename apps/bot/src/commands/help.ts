@@ -1,5 +1,6 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { brand, zettako } from '../brand.ts';
+import { accessCommand } from './access.ts';
 import type { Command } from '../interactions.ts';
 import { embed } from '../lib/replies.ts';
 import { panelCommand } from './panel.ts';
@@ -37,7 +38,7 @@ export const helpCommand: Command = {
 							'Works with Calagopus, Pterodactyl 1.x and 2.x, and Pelican. Link a panel for just yourself (works in DMs) or for a whole Discord server.',
 							'',
 							'**Commands**',
-							describe([serverCommand, panelCommand]),
+							describe([serverCommand, panelCommand, accessCommand]),
 						].join('\n'),
 					),
 			],

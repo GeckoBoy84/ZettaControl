@@ -1,16 +1,15 @@
-# PteroControl v2
+# ZettaControl
 
 Control your game servers from Discord. Works with **Calagopus**, **Pterodactyl 1.x and 2.x**, and **Pelican**.
 
-Built and hosted by [Zettako](https://zettako.net). v2 is a full rewrite and is in alpha. The old v1 bot lives on the [`v1` branch](https://github.com/GeckoBoy84/PteroControl/tree/v1).
-
-> The name is temporary. A rename is planned before the v2.0.0 release.
+Built and hosted by [Zettako](https://zettako.net). Formerly PteroControl: v2 is a full rewrite and is in alpha. The old v1 bot lives on the [`v1` branch](https://github.com/GeckoBoy84/PteroControl/tree/v1).
 
 ## Features (so far)
 
 - Link panels with a modal. API keys never touch chat and are stored encrypted (AES-256-GCM).
 - One click setup for Zettako; auto-detection for every other panel.
-- Panels for **just you** (usable in DMs and any server, including as a user-installed app) or for a **whole Discord server**, with role based access.
+- Panels for **just you** (usable in DMs and any server, including as a user-installed app) or for a **whole Discord server**.
+- Role based access for server panels: Manage Server is a manager by default, `/access managers` adds manager roles, and `/access grant` gives any role View, Power or Full access to a whole panel or to single game servers.
 - `/server view`: live CPU, memory, disk, network and uptime with start, restart, stop, kill and console command buttons.
 - Server autocomplete across every panel you can use.
 

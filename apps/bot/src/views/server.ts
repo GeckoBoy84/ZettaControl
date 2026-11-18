@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, type EmbedBuilder } from 'discord.js';
 import { PANEL_KIND_LABELS, type ServerResources, type ServerState, type ServerSummary } from '@zettako/panels';
-import type { PanelRow } from '../db/schema.ts';
+import type { AccessLevel, PanelRow } from '../db/schema.ts';
+import { atLeast } from '../lib/access.ts';
 import { customId } from '../interactions.ts';
 import { formatBytes, formatCpu, formatLimit, formatUptime } from '../lib/format.ts';
 import { embed } from '../lib/replies.ts';
@@ -19,10 +20,12 @@ export interface ServerViewOptions {
 	panel: PanelRow;
 	server: ServerSummary;
 	resources: ServerResources | null;
+	/** The viewer's access. Buttons they cannot use are left out. */
+	level: AccessLevel;
 	notice?: string;
 }
 
-export function renderServerView({ panel, server, resources, notice }: ServerViewOptions) {
+export function renderServerView({ panel, server, resources, level, notice }: ServerViewOptions) {
 	const state = resources?.state ?? 'unknown';
 	const view: EmbedBuilder = embed()
 		.setTitle(server.name)
@@ -78,17 +81,22 @@ export function renderServerView({ panel, server, resources, notice }: ServerVie
 			.setDisabled(blocked || state === 'offline'),
 	);
 
-	const tools = new ActionRowBuilder<ButtonBuilder>().addComponents(
-		new ButtonBuilder()
-			.setCustomId(customId(SERVER_PREFIX, 'cmd', ...ids))
-			.setLabel('Send command')
-			.setStyle(ButtonStyle.Secondary)
-			.setDisabled(blocked || state !== 'running'),
+	const tools = new ActionRowBuilder<ButtonBuilder>();
+	if (atLeast(level, 'full')) {
+		tools.addComponents(
+			new ButtonBuilder()
+				.setCustomId(customId(SERVER_PREFIX, 'cmd', ...ids))
+				.setLabel('Send command')
+				.setStyle(ButtonStyle.Secondary)
+				.setDisabled(blocked || state !== 'running'),
+		);
+	}
+	tools.addComponents(
 		new ButtonBuilder().setCustomId(customId(SERVER_PREFIX, 'refresh', ...ids)).setLabel('Refresh').setStyle(ButtonStyle.Secondary),
 		new ButtonBuilder().setURL(serverPageUrl(panel, server)).setLabel('Open in panel').setStyle(ButtonStyle.Link),
 	);
 
-	return { embeds: [view], components: [power, tools] };
+	return { embeds: [view], components: atLeast(level, 'power') ? [power, tools] : [tools] };
 }
 
 /** All supported panels serve the server page at /server/<short id>. */

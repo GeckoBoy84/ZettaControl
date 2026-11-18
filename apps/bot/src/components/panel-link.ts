@@ -18,7 +18,7 @@ import { customId, type ComponentHandler } from '../interactions.ts';
 import { encryptSecret } from '../lib/crypto.ts';
 import { truncate } from '../lib/format.ts';
 import { assertPublicUrl } from '../lib/network.ts';
-import { canManageGuildPanels, guildContext } from '../lib/panels.ts';
+import { resolveActor } from '../lib/access.ts';
 import { embed, UserFacingError } from '../lib/replies.ts';
 
 export const PANEL_LINK_PREFIX = 'link';
@@ -83,9 +83,11 @@ function buildModal(scope: Scope, preset: Preset): ModalBuilder {
 async function submit(interaction: ModalSubmitInteraction, scope: Scope, preset: Preset): Promise<void> {
 	await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-	const ownerId = scope === 'guild' ? guildContext(interaction) : interaction.user.id;
-	if (!ownerId || (scope === 'guild' && !canManageGuildPanels(interaction))) {
-		throw new UserFacingError('You need the Manage Server permission to link a panel for this server.');
+	// Checked again here: the modal can be submitted long after the button was shown.
+	const actor = await resolveActor(interaction);
+	const ownerId = scope === 'guild' ? actor.guildId : actor.userId;
+	if (!ownerId || (scope === 'guild' && !actor.isManager)) {
+		throw new UserFacingError('Only panel managers can link a panel for this server.');
 	}
 
 	const apiKey = interaction.fields.getTextInputValue('key').trim();

@@ -1,67 +1,12 @@
-import {
-	ApplicationIntegrationType,
-	PermissionFlagsBits,
-	type GuildMember,
-	type APIInteractionGuildMember,
-	type Interaction,
-} from 'discord.js';
-import { and, eq, or } from 'drizzle-orm';
 import { createPanelClient, type PanelClient, type ServerSummary } from '@zettako/panels';
 import { brand } from '../brand.ts';
-import { db } from '../db/client.ts';
-import { panels, type PanelRow } from '../db/schema.ts';
+import type { PanelRow } from '../db/schema.ts';
 import { decryptSecret } from './crypto.ts';
 
+// Panel clients, a short lived server list cache, and server references.
+// Who may use a panel is decided in access.ts.
+
 const SERVER_CACHE_TTL_MS = 30_000;
-
-/**
- * The guild whose panels apply to this interaction, or null. Guild panels only
- * apply where the bot itself is installed in the guild, not when someone uses
- * the user-installed app in a server the bot is not in.
- */
-export function guildContext(interaction: Interaction): string | null {
-	if (!interaction.guildId) return null;
-	const owners = interaction.authorizingIntegrationOwners;
-	return owners[ApplicationIntegrationType.GuildInstall] === interaction.guildId ? interaction.guildId : null;
-}
-
-export function canManageGuildPanels(interaction: Interaction): boolean {
-	return guildContext(interaction) !== null && (interaction.memberPermissions?.has(PermissionFlagsBits.ManageGuild) ?? false);
-}
-
-function memberRoleIds(member: GuildMember | APIInteractionGuildMember | null): string[] {
-	if (!member) return [];
-	return Array.isArray(member.roles) ? member.roles : [...member.roles.cache.keys()];
-}
-
-/** Can this interaction's user operate servers on this panel? */
-export function canUsePanel(interaction: Interaction, panel: PanelRow): boolean {
-	if (panel.scope === 'user') return panel.ownerId === interaction.user.id;
-	if (guildContext(interaction) !== panel.ownerId) return false;
-	if (canManageGuildPanels(interaction)) return true;
-	const roles = memberRoleIds(interaction.member);
-	return panel.allowedRoleIds.some((roleId) => roles.includes(roleId));
-}
-
-/** Panels the user can see here: their own, plus the guild's they have access to. */
-export async function accessiblePanels(interaction: Interaction): Promise<PanelRow[]> {
-	const guildId = guildContext(interaction);
-	const rows = await db
-		.select()
-		.from(panels)
-		.where(
-			guildId
-				? or(and(eq(panels.scope, 'user'), eq(panels.ownerId, interaction.user.id)), and(eq(panels.scope, 'guild'), eq(panels.ownerId, guildId)))
-				: and(eq(panels.scope, 'user'), eq(panels.ownerId, interaction.user.id)),
-		)
-		.orderBy(panels.name);
-	return rows.filter((row) => canUsePanel(interaction, row));
-}
-
-export async function findAccessiblePanel(interaction: Interaction, panelId: string): Promise<PanelRow | null> {
-	const [row] = await db.select().from(panels).where(eq(panels.id, panelId)).limit(1);
-	return row && canUsePanel(interaction, row) ? row : null;
-}
 
 const clients = new Map<string, { updatedAt: number; client: PanelClient }>();
 

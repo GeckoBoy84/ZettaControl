@@ -10,6 +10,7 @@ import {
 } from 'discord.js';
 import type { PowerAction } from '@zettako/panels';
 import { resolveServer } from '../commands/shared.ts';
+import type { AccessLevel } from '../db/schema.ts';
 import { customId, type ComponentHandler } from '../interactions.ts';
 import { embed } from '../lib/replies.ts';
 import { serverRef } from '../lib/panels.ts';
@@ -23,12 +24,12 @@ export const serverViewHandler: ComponentHandler = {
 	prefix: SERVER_PREFIX,
 
 	async handle(interaction, [action, panelId = '', serverId = '', extra]) {
-		const target = await resolveServer(interaction, serverRef(panelId, serverId));
-		const { panel, client } = target;
+		const needed: AccessLevel = action === 'refresh' ? 'view' : action === 'cmd' || action === 'cmdsubmit' ? 'full' : 'power';
+		const { panel, client, level } = await resolveServer(interaction, serverRef(panelId, serverId), needed);
 
 		const rerender = async (notice?: string) => {
 			const [server, resources] = await Promise.all([client.getServer(serverId), client.getResources(serverId).catch(() => null)]);
-			return renderServerView({ panel, server, resources, notice });
+			return renderServerView({ panel, server, resources, level, notice });
 		};
 
 		switch (action) {
