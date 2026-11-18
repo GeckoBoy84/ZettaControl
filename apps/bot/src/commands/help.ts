@@ -34,6 +34,8 @@ export const helpCommand: Command = {
 					.setTitle(`${brand.name} help`)
 					.setDescription(
 						[
+							'New here? `/tutorial` walks you through everything in about a minute.',
+							'',
 							'**Getting started**',
 							`1. \`/panel add\` and pick ${zettako.name} or paste your own panel URL.`,
 							'2. `/server view` and start typing a server name.',
@@ -46,6 +48,8 @@ export const helpCommand: Command = {
 							'',
 							'**Live in your channels** (needs the bot added to the server)',
 							describe([consoleCommand, statusCommand, alertsCommand]),
+							'',
+							'Found a bug or have an idea? `/feedback`',
 						].join('\n'),
 					),
 			],
