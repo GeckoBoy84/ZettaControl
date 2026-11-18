@@ -24,9 +24,14 @@
 - [x] Alerts: crash, offline and high resource notifications. Polling on every panel, plus the Calagopus crash log
 - [ ] Calagopus webhooks instead of polling. Needs a public HTTP endpoint on the bot and keys with webhook permissions
 
-## Phase 4: Admin
+## Phase 4: Admin (done)
 
-Application and admin API: users, servers, nodes. Pterodactyl 1.x nests, 2.x tags, Pelican and Calagopus each in their own adapter.
+- [x] Admin adapters for every panel in their own files: Calagopus `/api/admin`, the application API on Pterodactyl 1.x, 2.x and Pelican. Optional encrypted admin key per panel; Calagopus can use the linked key.
+- [x] `/admin overview | servers | users`: totals, node status, find any server or user, suspend, unsuspend and reinstall servers, suspend users on Calagopus
+- [x] Panel stats boards (`/stats`): panel and node uptime and usage with down and recovery posts, debounced over two checks, state kept across restarts
+- [ ] Nests (1.x), tags (2.x) and eggs
+- [ ] Create users and servers from Discord
+- [ ] Test against live panels of each type
 
 ## Phase 5: Zettako one-click link
 
