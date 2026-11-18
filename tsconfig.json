@@ -1,0 +1,22 @@
+{
+  // Node runs the .ts sources directly (type stripping), so tsc only typechecks.
+  // erasableSyntaxOnly keeps us to syntax Node can strip: no enums, namespaces
+  // or constructor parameter properties.
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["esnext"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["packages/*/src", "packages/*/test", "apps/*/src", "apps/*/test", "apps/*/*.config.ts", "private/**/*.ts", "private.example/**/*.ts"]
+}

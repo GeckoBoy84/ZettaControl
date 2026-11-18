@@ -1,1 +1,16 @@
-node_modules
+node_modules/
+dist/
+*.log
+.env
+.env.*
+!.env.example
+
+# Zettako-only hooks for the public bot (telemetry, staff alerts). See private.example/.
+private/
+
+# Local copy of v1 for reference while v2 is built. v1 lives on the `v1` branch.
+OLD-v1.x/
+
+# Website build output
+WEBSITE/dist/
+WEBSITE/.astro/
