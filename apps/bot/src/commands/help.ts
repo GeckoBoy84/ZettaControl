@@ -1,11 +1,14 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { brand, zettako } from '../brand.ts';
 import { accessCommand } from './access.ts';
+import { alertsCommand } from './alerts.ts';
+import { consoleCommand } from './console.ts';
 import type { Command } from '../interactions.ts';
 import { embed } from '../lib/replies.ts';
 import { panelCommand } from './panel.ts';
 import { serverCommand } from './server.ts';
 import { slashCommand } from './shared.ts';
+import { statusCommand } from './status.ts';
 
 /** Lists every subcommand of the given commands straight from their definitions. */
 function describe(commands: Command[]): string {
@@ -36,9 +39,13 @@ export const helpCommand: Command = {
 							'2. `/server view` and start typing a server name.',
 							'',
 							'Works with Calagopus, Pterodactyl 1.x and 2.x, and Pelican. Link a panel for just yourself (works in DMs) or for a whole Discord server.',
+							'`/server view` has a **More** menu for backups, files, schedules, databases and the rest.',
 							'',
 							'**Commands**',
 							describe([serverCommand, panelCommand, accessCommand]),
+							'',
+							'**Live in your channels** (needs the bot added to the server)',
+							describe([consoleCommand, statusCommand, alertsCommand]),
 						].join('\n'),
 					),
 			],
