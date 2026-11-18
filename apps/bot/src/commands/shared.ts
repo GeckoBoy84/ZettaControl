@@ -21,6 +21,7 @@ import { truncate } from '../lib/format.ts';
 import { clientFor, listServersCached, parseServerRef, serverRef } from '../lib/panels.ts';
 import { UserFacingError } from '../lib/replies.ts';
 import { logger } from '../logger.ts';
+import type { ServerContext } from '../views/sections.ts';
 
 const AUTOCOMPLETE_BUDGET_MS = 2_500;
 
@@ -94,7 +95,7 @@ export async function managedPanelAutocomplete(interaction: AutocompleteInteract
  * Resolves a `<panelId>:<serverId>` ref the user picked and checks they have at least
  * `needed` on that server. Access is checked on every interaction, never cached in IDs.
  */
-export async function resolveServer(interaction: Interaction, ref: string, needed: AccessLevel, actor?: Actor) {
+export async function resolveServer(interaction: Interaction, ref: string, needed: AccessLevel, actor?: Actor): Promise<ServerContext> {
 	const parsed = parseServerRef(ref);
 	if (!parsed) throw new UserFacingError('Pick a server from the list as you type. If none show up, link a panel with `/panel add`.');
 

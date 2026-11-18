@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import type { PanelKind } from '@zettako/panels';
 
 /**
@@ -71,5 +71,70 @@ export const roleGrants = pgTable(
 	],
 );
 
+/** A private thread that streams a game server's console. See lib/consoles.ts. */
+export const consoleThreads = pgTable(
+	'console_threads',
+	{
+		threadId: text('thread_id').primaryKey(),
+		guildId: text('guild_id').notNull(),
+		panelId: uuid('panel_id')
+			.notNull()
+			.references(() => panels.id, { onDelete: 'cascade' }),
+		serverId: text('server_id').notNull(),
+		serverName: text('server_name').notNull(),
+		createdBy: text('created_by').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index('console_threads_guild_idx').on(table.guildId)],
+);
+
+/** A channel message the bot keeps up to date with server states. See lib/monitor.ts. */
+export const statusBoards = pgTable(
+	'status_boards',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		guildId: text('guild_id').notNull(),
+		channelId: text('channel_id').notNull(),
+		messageId: text('message_id').notNull().unique(),
+		panelId: uuid('panel_id')
+			.notNull()
+			.references(() => panels.id, { onDelete: 'cascade' }),
+		/** Panel server ID, or ALL_SERVERS. */
+		serverId: text('server_id').notNull().default(ALL_SERVERS),
+		createdBy: text('created_by').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index('status_boards_guild_idx').on(table.guildId)],
+);
+
+export const ALERT_EVENTS = ['offline', 'crash', 'resources'] as const;
+export type AlertEvent = (typeof ALERT_EVENTS)[number];
+
+/** Posts to a channel when a server goes offline, crashes or runs hot. See lib/monitor.ts. */
+export const alertRules = pgTable(
+	'alert_rules',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		guildId: text('guild_id').notNull(),
+		channelId: text('channel_id').notNull(),
+		panelId: uuid('panel_id')
+			.notNull()
+			.references(() => panels.id, { onDelete: 'cascade' }),
+		/** Panel server ID, or ALL_SERVERS. */
+		serverId: text('server_id').notNull().default(ALL_SERVERS),
+		serverName: text('server_name'),
+		events: text('events').array().$type<AlertEvent[]>().notNull(),
+		/** Percent of the server's CPU, memory or disk limit that counts as high. */
+		threshold: integer('threshold').notNull().default(90),
+		mentionRoleId: text('mention_role_id'),
+		createdBy: text('created_by').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index('alert_rules_guild_idx').on(table.guildId)],
+);
+
 export type PanelRow = typeof panels.$inferSelect;
 export type RoleGrantRow = typeof roleGrants.$inferSelect;
+export type ConsoleThreadRow = typeof consoleThreads.$inferSelect;
+export type StatusBoardRow = typeof statusBoards.$inferSelect;
+export type AlertRuleRow = typeof alertRules.$inferSelect;

@@ -4,15 +4,28 @@ import { accessCommand } from './commands/access.ts';
 import { helpCommand } from './commands/help.ts';
 import { panelCommand } from './commands/panel.ts';
 import { serverCommand } from './commands/server.ts';
+import { backupsHandler } from './components/backups.ts';
+import { databasesHandler } from './components/databases.ts';
+import { filesHandler } from './components/files.ts';
 import { panelLinkHandler } from './components/panel-link.ts';
+import { schedulesHandler } from './components/schedules.ts';
 import { serverViewHandler } from './components/server-view.ts';
+import { startupHandler } from './components/startup.ts';
 import { emit } from './hooks.ts';
-import type { Command, ComponentHandler } from './interactions.ts';
+import { unpackArg, type Command, type ComponentHandler } from './interactions.ts';
 import { describeError, replyError } from './lib/replies.ts';
 import { logger } from './logger.ts';
 
 export const commands: Command[] = [serverCommand, panelCommand, accessCommand, helpCommand, aboutCommand];
-const componentHandlers: ComponentHandler[] = [panelLinkHandler, serverViewHandler];
+const componentHandlers: ComponentHandler[] = [
+	panelLinkHandler,
+	serverViewHandler,
+	backupsHandler,
+	filesHandler,
+	schedulesHandler,
+	databasesHandler,
+	startupHandler,
+];
 
 const commandsByName = new Map(commands.map((command) => [command.data.name, command]));
 const handlersByPrefix = new Map(componentHandlers.map((handler) => [handler.prefix, handler]));
@@ -35,7 +48,7 @@ export async function routeInteraction(interaction: Interaction): Promise<void> 
 		}
 		if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
 			const [prefix = '', ...args] = interaction.customId.split(':');
-			await handlersByPrefix.get(prefix)?.handle(interaction, args);
+			await handlersByPrefix.get(prefix)?.handle(interaction, args.map(unpackArg));
 		}
 	} catch (error) {
 		ok = false;
