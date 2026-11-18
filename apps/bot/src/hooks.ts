@@ -18,6 +18,16 @@ export interface CommandEvent {
 	ok: boolean;
 }
 
+export type FeedbackKind = 'bug' | 'idea' | 'question' | 'other';
+
+export interface FeedbackEvent {
+	kind: FeedbackKind;
+	message: string;
+	userId: string;
+	userTag: string;
+	guildId: string | null;
+}
+
 export interface BotHooks {
 	onReady?(client: Client<true>): void | Promise<void>;
 	onCommand?(event: CommandEvent): void | Promise<void>;
@@ -26,6 +36,8 @@ export interface BotHooks {
 	onGuildLeave?(guild: Guild): void | Promise<void>;
 	onPanelLinked?(event: { kind: PanelKind; scope: 'user' | 'guild'; isZettako: boolean }): void | Promise<void>;
 	onPanelUnlinked?(event: { kind: PanelKind; scope: 'user' | 'guild' }): void | Promise<void>;
+	/** Without this hook, /feedback points people to the support server instead. */
+	onFeedback?(event: FeedbackEvent): void | Promise<void>;
 }
 
 let hooks: BotHooks = {};
@@ -39,6 +51,10 @@ export async function loadHooks(): Promise<void> {
 	const module = (await import(pathToFileURL(path).href)) as { default?: BotHooks };
 	hooks = module.default ?? {};
 	logger.info({ hooks: Object.keys(hooks) }, 'Loaded private hooks');
+}
+
+export function hasHook(name: keyof BotHooks): boolean {
+	return typeof hooks[name] === 'function';
 }
 
 /** Calls a hook without letting it break the bot. Never awaited by callers. */
