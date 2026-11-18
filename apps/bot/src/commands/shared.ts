@@ -5,7 +5,7 @@ import {
 	type AutocompleteInteraction,
 	type Interaction,
 } from 'discord.js';
-import { PANEL_KIND_LABELS } from '@zettako/panels';
+import { PANEL_KIND_LABELS, type ServerSummary } from '@zettako/panels';
 import type { AccessLevel, PanelRow } from '../db/schema.ts';
 import {
 	ACCESS_LEVEL_LABELS,
@@ -47,30 +47,37 @@ export function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | nul
 	return Promise.race([promise, new Promise<null>((resolve) => setTimeout(() => resolve(null), ms))]);
 }
 
-/** Servers the user can see on any panel here, filtered by what they typed. */
-export async function serverAutocomplete(interaction: AutocompleteInteraction): Promise<void> {
-	const query = interaction.options.getFocused().toLowerCase();
-	const available = await accessiblePanels(await resolveActor(interaction));
-
+/**
+ * Every server the actor can see on the panels here. Panels that do not answer within
+ * the budget are skipped. `multiplePanels` says whether names need the panel added.
+ */
+export async function accessibleServers(actor: Actor, budgetMs = AUTOCOMPLETE_BUDGET_MS): Promise<{ servers: { panel: PanelRow; server: ServerSummary }[]; multiplePanels: boolean }> {
+	const available = await accessiblePanels(actor);
 	const results = await Promise.all(
 		available.map(async (access) => {
-			const servers = await withTimeout(listServersCached(access.panel), AUTOCOMPLETE_BUDGET_MS).catch((error: unknown) => {
-				logger.debug({ err: error, panel: access.panel.id }, 'Autocomplete server list failed');
+			const servers = await withTimeout(listServersCached(access.panel), budgetMs).catch((error: unknown) => {
+				logger.debug({ err: error, panel: access.panel.id }, 'Server list failed');
 				return null;
 			});
 			return (servers ?? []).filter((server) => levelFor(access, server.id) !== null).map((server) => ({ panel: access.panel, server }));
 		}),
 	);
+	return { servers: results.flat(), multiplePanels: available.length > 1 };
+}
 
-	const showPanel = available.length > 1;
-	const choices = results
-		.flat()
+export function serverChoiceName(panel: PanelRow, server: ServerSummary, showPanel: boolean): string {
+	return truncate(showPanel ? `${server.name} (${panel.name})` : server.name, 100);
+}
+
+/** Servers the user can see on any panel here, filtered by what they typed. */
+export async function serverAutocomplete(interaction: AutocompleteInteraction): Promise<void> {
+	const query = interaction.options.getFocused().toLowerCase();
+	const { servers, multiplePanels } = await accessibleServers(await resolveActor(interaction));
+
+	const choices = servers
 		.filter(({ server }) => !query || server.name.toLowerCase().includes(query) || server.shortId.toLowerCase().startsWith(query))
 		.slice(0, 25)
-		.map(({ panel, server }) => ({
-			name: truncate(showPanel ? `${server.name} (${panel.name})` : server.name, 100),
-			value: serverRef(panel.id, server.id),
-		}));
+		.map(({ panel, server }) => ({ name: serverChoiceName(panel, server, multiplePanels), value: serverRef(panel.id, server.id) }));
 
 	await interaction.respond(choices);
 }

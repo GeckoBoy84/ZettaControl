@@ -1,15 +1,15 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { MessageFlags } from 'discord.js';
 import { eq } from 'drizzle-orm';
 import { PANEL_KIND_LABELS } from '@zettako/panels';
 import { brand, zettako } from '../brand.ts';
 import { db } from '../db/client.ts';
 import { panels } from '../db/schema.ts';
 import { emit } from '../hooks.ts';
-import { customId, type Command } from '../interactions.ts';
+import type { Command } from '../interactions.ts';
 import { ACCESS_LEVEL_LABELS, accessiblePanels, managedPanels, resolveActor } from '../lib/access.ts';
 import { forgetClient } from '../lib/panels.ts';
 import { embed, UserFacingError } from '../lib/replies.ts';
-import { PANEL_LINK_PREFIX } from '../components/panel-link.ts';
+import { renderLinkPrompt } from '../views/link-panel.ts';
 import { managedPanelAutocomplete, slashCommand } from './shared.ts';
 
 export const panelCommand: Command = {
@@ -50,32 +50,7 @@ export const panelCommand: Command = {
 					);
 				}
 
-				const who = scope === 'guild' ? 'panel managers, and the roles you grant with `/access grant`' : 'only you, in any server or DM';
-				await interaction.reply({
-					flags: MessageFlags.Ephemeral,
-					embeds: [
-						embed()
-							.setTitle('Link a panel')
-							.setDescription(
-								[
-									`This panel will be usable by ${who}.`,
-									'',
-									`**On ${zettako.name}?** Pick ${zettako.name} and paste an API key from [your account](${zettako.apiKeysUrl}). That is it.`,
-									'',
-									'**Another panel?** You will need its URL and a client API key (Account > API Keys). Admin or application keys will not work.',
-									'',
-									'Your key is encrypted before it is stored and is never shown again.',
-								].join('\n'),
-							),
-					],
-					components: [
-						new ActionRowBuilder<ButtonBuilder>().addComponents(
-							new ButtonBuilder().setCustomId(customId(PANEL_LINK_PREFIX, 'open', scope, 'zettako')).setLabel(zettako.name).setStyle(ButtonStyle.Primary),
-							new ButtonBuilder().setCustomId(customId(PANEL_LINK_PREFIX, 'open', scope, 'custom')).setLabel('Another panel').setStyle(ButtonStyle.Secondary),
-							new ButtonBuilder().setURL(zettako.affiliateUrl).setLabel(`Get a server on ${zettako.name}`).setStyle(ButtonStyle.Link),
-						),
-					],
-				});
+				await interaction.reply(renderLinkPrompt(scope));
 				return;
 			}
 
