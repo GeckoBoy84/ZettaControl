@@ -18,6 +18,7 @@
     "deploy-commands": "npm run deploy-commands -w @zettako/bot",
     "db:generate": "npm run db:generate -w @zettako/bot",
     "db:migrate": "npm run db:migrate -w @zettako/bot",
+    "brand:logos": "npm run brand:logos -w @zettako/bot",
     "tutorial:images": "npm run tutorial:images -w @zettako/bot",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test \"packages/*/test/**/*.test.ts\" \"apps/*/test/**/*.test.ts\""
