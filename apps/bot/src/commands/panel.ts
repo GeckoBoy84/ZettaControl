@@ -6,10 +6,11 @@ import { db } from '../db/client.ts';
 import { panels } from '../db/schema.ts';
 import { emit } from '../hooks.ts';
 import { customId, type Command } from '../interactions.ts';
-import { accessiblePanels, canManageGuildPanels, forgetClient, guildContext } from '../lib/panels.ts';
+import { ACCESS_LEVEL_LABELS, accessiblePanels, managedPanels, resolveActor } from '../lib/access.ts';
+import { forgetClient } from '../lib/panels.ts';
 import { embed, UserFacingError } from '../lib/replies.ts';
 import { PANEL_LINK_PREFIX } from '../components/panel-link.ts';
-import { managedPanelAutocomplete, managedPanels, slashCommand } from './shared.ts';
+import { managedPanelAutocomplete, slashCommand } from './shared.ts';
 
 export const panelCommand: Command = {
 	data: slashCommand('panel', 'Link and manage your panels')
@@ -30,33 +31,26 @@ export const panelCommand: Command = {
 				.setName('remove')
 				.setDescription('Unlink a panel and delete its stored API key')
 				.addStringOption((option) => option.setName('panel').setDescription('Panel').setRequired(true).setAutocomplete(true)),
-		)
-		.addSubcommand((sub) =>
-			sub
-				.setName('access')
-				.setDescription('Allow or disallow a role to use one of this server\'s panels')
-				.addStringOption((option) => option.setName('panel').setDescription('Panel').setRequired(true).setAutocomplete(true))
-				.addRoleOption((option) => option.setName('role').setDescription('Role to toggle').setRequired(true)),
 		),
 
 	async autocomplete(interaction) {
-		const sub = interaction.options.getSubcommand();
-		await managedPanelAutocomplete(interaction, sub === 'access' ? (panel) => panel.scope === 'guild' : undefined);
+		await managedPanelAutocomplete(interaction);
 	},
 
 	async execute(interaction) {
+		const actor = await resolveActor(interaction);
 		switch (interaction.options.getSubcommand()) {
 			case 'add': {
 				const scope = (interaction.options.getString('for') ?? 'user') as 'user' | 'guild';
-				if (scope === 'guild' && !canManageGuildPanels(interaction)) {
+				if (scope === 'guild' && !actor.isManager) {
 					throw new UserFacingError(
-						guildContext(interaction)
-							? 'You need the Manage Server permission to link a panel for this server.'
+						actor.guildId
+							? 'Only panel managers can link a panel for this server: members with Manage Server, or a manager role set with `/access managers`.'
 							: `Server panels need ${brand.name} added to the server. You can still link one for just yourself.`,
 					);
 				}
 
-				const who = scope === 'guild' ? 'everyone you allow on this Discord server' : 'only you, in any server or DM';
+				const who = scope === 'guild' ? 'panel managers, and the roles you grant with `/access grant`' : 'only you, in any server or DM';
 				await interaction.reply({
 					flags: MessageFlags.Ephemeral,
 					embeds: [
@@ -86,7 +80,7 @@ export const panelCommand: Command = {
 			}
 
 			case 'list': {
-				const rows = await accessiblePanels(interaction);
+				const rows = await accessiblePanels(actor);
 				if (rows.length === 0) {
 					await interaction.reply({
 						flags: MessageFlags.Ephemeral,
@@ -94,10 +88,10 @@ export const panelCommand: Command = {
 					});
 					return;
 				}
-				const lines = rows.map((panel) => {
+				const lines = rows.map(({ panel, all, servers }) => {
 					const owner = panel.scope === 'guild' ? 'this server' : 'personal';
-					const roles = panel.scope === 'guild' && panel.allowedRoleIds.length > 0 ? ` · roles: ${panel.allowedRoleIds.map((id) => `<@&${id}>`).join(' ')}` : '';
-					return `**${panel.name}** · ${PANEL_KIND_LABELS[panel.kind]} · ${owner}\n${panel.url} as \`${panel.panelUsername}\`${roles}`;
+					const yours = all ? ACCESS_LEVEL_LABELS[all] : `${servers.size} server${servers.size === 1 ? '' : 's'}`;
+					return `**${panel.name}** · ${PANEL_KIND_LABELS[panel.kind]} · ${owner} · your access: ${yours}\n${panel.url} as \`${panel.panelUsername}\``;
 				});
 				await interaction.reply({ flags: MessageFlags.Ephemeral, embeds: [embed().setTitle('Your panels').setDescription(lines.join('\n\n'))] });
 				return;
@@ -105,37 +99,15 @@ export const panelCommand: Command = {
 
 			case 'remove': {
 				const panelId = interaction.options.getString('panel', true);
-				const panel = (await managedPanels(interaction)).find((row) => row.id === panelId);
-				if (!panel) throw new UserFacingError('Pick a panel from the list. You can only remove your own panels, or this server\'s with Manage Server.');
+				const panel = (await managedPanels(actor)).find((row) => row.id === panelId);
+				if (!panel) throw new UserFacingError('Pick a panel from the list. You can only remove your own panels, or this server\'s if you are a panel manager.');
 
 				await db.delete(panels).where(eq(panels.id, panel.id));
 				forgetClient(panel.id);
 				emit('onPanelUnlinked', { kind: panel.kind, scope: panel.scope });
 				await interaction.reply({
 					flags: MessageFlags.Ephemeral,
-					embeds: [embed().setDescription(`Unlinked **${panel.name}** and deleted its stored key. You may also want to delete the key on the panel itself.`)],
-				});
-				return;
-			}
-
-			case 'access': {
-				const panelId = interaction.options.getString('panel', true);
-				const role = interaction.options.getRole('role', true);
-				const panel = (await managedPanels(interaction)).find((row) => row.id === panelId && row.scope === 'guild');
-				if (!panel) throw new UserFacingError('Pick one of this server\'s panels. You need Manage Server to change access.');
-
-				const allowed = panel.allowedRoleIds.includes(role.id);
-				const allowedRoleIds = allowed ? panel.allowedRoleIds.filter((id) => id !== role.id) : [...panel.allowedRoleIds, role.id];
-				await db.update(panels).set({ allowedRoleIds, updatedAt: new Date() }).where(eq(panels.id, panel.id));
-				await interaction.reply({
-					flags: MessageFlags.Ephemeral,
-					embeds: [
-						embed().setDescription(
-							allowed
-								? `<@&${role.id}> can no longer use **${panel.name}**.`
-								: `<@&${role.id}> can now use **${panel.name}**: view servers, power actions and console commands. Members with Manage Server always have access.`,
-						),
-					],
+					embeds: [embed().setDescription(`Unlinked **${panel.name}** and deleted its stored key and role access. You may also want to delete the key on the panel itself.`)],
 				});
 				return;
 			}

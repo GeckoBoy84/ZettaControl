@@ -52,12 +52,14 @@ export const serverCommand: Command = {
 
 	async execute(interaction) {
 		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-		const { panel, client, serverId } = await resolveServer(interaction, interaction.options.getString('server', true));
+		const sub = interaction.options.getSubcommand();
+		const needed = sub === 'power' ? 'power' : sub === 'command' ? 'full' : 'view';
+		const { panel, client, serverId, level } = await resolveServer(interaction, interaction.options.getString('server', true), needed);
 
-		switch (interaction.options.getSubcommand()) {
+		switch (sub) {
 			case 'view': {
 				const [server, resources] = await Promise.all([client.getServer(serverId), client.getResources(serverId).catch(() => null)]);
-				await interaction.editReply(renderServerView({ panel, server, resources }));
+				await interaction.editReply(renderServerView({ panel, server, resources, level }));
 				return;
 			}
 			case 'power': {

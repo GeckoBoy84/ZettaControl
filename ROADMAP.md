@@ -5,8 +5,9 @@
 - [x] Monorepo, TypeScript on Node 26, discord.js 14, Postgres with Drizzle
 - [x] Panel adapters: Calagopus, Pterodactyl 1.x, Pterodactyl 2.x, Pelican, with auto-detection
 - [x] Encrypted API keys, keys entered through modals only
-- [x] Personal panels (DMs, user installs) and Discord server panels with role access
-- [x] `/server view | power | command`, `/panel add | list | remove | access`, `/help`, `/about`
+- [x] Personal panels (DMs, user installs) and Discord server panels
+- [x] Manager roles and per panel or per game server role access (View, Power, Full)
+- [x] `/server view | power | command`, `/panel add | list | remove`, `/access grant | revoke | list | managers`, `/help`, `/about`
 - [x] Private hooks for deployment-only telemetry and alerts
 - [ ] Test against live panels of each type
 - [ ] Docker image and Calagopus egg for hosting

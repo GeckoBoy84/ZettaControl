@@ -1,5 +1,6 @@
 import type { Interaction } from 'discord.js';
 import { aboutCommand } from './commands/about.ts';
+import { accessCommand } from './commands/access.ts';
 import { helpCommand } from './commands/help.ts';
 import { panelCommand } from './commands/panel.ts';
 import { serverCommand } from './commands/server.ts';
@@ -10,7 +11,7 @@ import type { Command, ComponentHandler } from './interactions.ts';
 import { describeError, replyError } from './lib/replies.ts';
 import { logger } from './logger.ts';
 
-export const commands: Command[] = [serverCommand, panelCommand, helpCommand, aboutCommand];
+export const commands: Command[] = [serverCommand, panelCommand, accessCommand, helpCommand, aboutCommand];
 const componentHandlers: ComponentHandler[] = [panelLinkHandler, serverViewHandler];
 
 const commandsByName = new Map(commands.map((command) => [command.data.name, command]));
