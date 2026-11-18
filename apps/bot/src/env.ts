@@ -15,6 +15,7 @@ const schema = z.object({
 		.refine((value) => Buffer.from(value, 'base64').length === 32, 'ENCRYPTION_KEY must be 32 bytes, base64 encoded'),
 	OWNER_IDS: snowflakeList,
 	LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error']).default('info'),
+	LOG_FORMAT: z.enum(['pretty', 'json']).default('pretty'),
 	PRIVATE_HOOKS: z.string().optional().transform((value) => value || undefined),
 	ALLOW_PRIVATE_PANEL_URLS: z
 		.string()

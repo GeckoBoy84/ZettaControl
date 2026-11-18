@@ -1,4 +1,6 @@
 node_modules/
+# Hash of the last registered slash commands (see apps/bot/src/deploy-commands.ts)
+.commands-hash
 dist/
 *.log
 .env
@@ -9,5 +11,4 @@ dist/
 private/
 
 # Website build output
-WEBSITE/dist/
-WEBSITE/.astro/
+WEBSITE/

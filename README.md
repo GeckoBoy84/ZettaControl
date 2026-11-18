@@ -21,21 +21,29 @@ See [ROADMAP.md](ROADMAP.md) for what is coming.
 apps/bot/            the Discord bot (discord.js 14, TypeScript)
 packages/panels/     one client interface for every supported panel
 private.example/     template for deployment-only hooks (copy to private/, which git ignores)
-WEBSITE/             the website
 ```
 
-TypeScript runs directly on Node 26 (type stripping), so there is no build step.
+TypeScript runs directly on Node 25.9+ (type stripping), so there is no build step.
 
 ## Self-hosting
 
-You need Node.js 26+ and a Postgres database. The easiest route is a [Zettako](https://zettako.net) Discord bot server, which includes a free Postgres database.
+You need Node.js 25.9 or newer and a Postgres database. The easiest route is a [Zettako](https://zettako.net) Discord bot server, which includes a free Postgres database.
+
+The start file is **`index.js`**. On every start it updates the database and registers the slash commands if they changed, so you never need to type commands into a console.
+
+### On a game panel (Zettako, Calagopus, Pterodactyl, Pelican)
+
+1. Create a server with a Node.js egg on Node 25.9 or newer.
+2. Upload this repository (or set the egg's git repo to it).
+3. Copy `.env.example` to `.env` and fill it in through the file manager.
+4. Set the start file to `index.js` and start the server. The egg's `npm install` on start installs everything.
+
+### Anywhere else
 
 ```sh
 npm install
 cp .env.example .env      # fill it in
-npm run db:migrate
-npm run deploy-commands
-npm start
+npm start                 # same as: node index.js
 ```
 
 Create the bot at <https://discord.com/developers/applications>. Under **Installation**, enable both **Guild Install** and **User Install** so people can use it in DMs.
