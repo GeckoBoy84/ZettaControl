@@ -27,6 +27,12 @@ export interface PanelCapabilities {
 	schedules: boolean;
 	databases: boolean;
 	subusers: boolean;
+	/** Allocations (IP and port) of a server. */
+	network: boolean;
+	/** Startup variables, read and edit. */
+	startup: boolean;
+	/** A crash log the bot can poll, for crash alerts. Without it alerts only see "went offline". */
+	crashLogs: boolean;
 }
 
 export interface PanelAccount {
@@ -73,6 +79,82 @@ export interface ConsoleCredentials {
 	token: string;
 }
 
+/** Dates are ISO 8601 strings as the panel sent them. */
+export interface Backup {
+	id: string;
+	name: string;
+	bytes: number;
+	successful: boolean;
+	locked: boolean;
+	createdAt: string;
+	/** null while the backup is still running. */
+	completedAt: string | null;
+}
+
+export interface FileEntry {
+	name: string;
+	directory: boolean;
+	size: number;
+	modifiedAt: string | null;
+}
+
+export interface Schedule {
+	id: string;
+	name: string;
+	enabled: boolean;
+	/** Human readable trigger, for example a cron expression. */
+	trigger: string | null;
+	lastRunAt: string | null;
+	nextRunAt: string | null;
+}
+
+export interface Database {
+	id: string;
+	name: string;
+	username: string;
+	host: string;
+	port: number;
+}
+
+export interface Subuser {
+	id: string;
+	username: string;
+	email: string | null;
+	permissions: string[];
+}
+
+export interface Allocation {
+	id: string;
+	ip: string;
+	alias: string | null;
+	port: number;
+	notes: string | null;
+	primary: boolean;
+}
+
+export interface StartupVariable {
+	/** The environment variable name, used to update it. */
+	key: string;
+	name: string;
+	description: string | null;
+	value: string;
+	defaultValue: string | null;
+	editable: boolean;
+	/** The panel hides the value. */
+	secret: boolean;
+}
+
+export interface CrashLog {
+	id: string;
+	at: string;
+	exitCode: number;
+	outOfMemory: boolean;
+}
+
+/**
+ * Every method exists on every adapter. Methods behind a capability that is false
+ * throw PanelError('unsupported').
+ */
 export interface PanelClient {
 	readonly kind: PanelKind;
 	readonly url: string;
@@ -85,6 +167,36 @@ export interface PanelClient {
 	power(id: string, action: PowerAction): Promise<void>;
 	sendCommand(id: string, command: string): Promise<void>;
 	getConsoleCredentials(id: string): Promise<ConsoleCredentials>;
+
+	listBackups(id: string): Promise<Backup[]>;
+	createBackup(id: string, name?: string): Promise<Backup>;
+	deleteBackup(id: string, backupId: string): Promise<void>;
+	restoreBackup(id: string, backupId: string): Promise<void>;
+	/** A short lived signed link. Treat it like a password. */
+	getBackupDownloadUrl(id: string, backupId: string): Promise<string>;
+
+	/** `directory` is absolute, for example `/` or `/plugins`. */
+	listFiles(id: string, directory: string): Promise<FileEntry[]>;
+	readFile(id: string, path: string): Promise<string>;
+	writeFile(id: string, path: string, content: string): Promise<void>;
+	/** A short lived signed link. Treat it like a password. */
+	getFileDownloadUrl(id: string, path: string): Promise<string>;
+
+	listSchedules(id: string): Promise<Schedule[]>;
+	runSchedule(id: string, scheduleId: string): Promise<void>;
+
+	listDatabases(id: string): Promise<Database[]>;
+	getDatabasePassword(id: string, databaseId: string): Promise<string | null>;
+	rotateDatabasePassword(id: string, databaseId: string): Promise<string | null>;
+
+	listSubusers(id: string): Promise<Subuser[]>;
+	listAllocations(id: string): Promise<Allocation[]>;
+
+	listStartupVariables(id: string): Promise<StartupVariable[]>;
+	setStartupVariable(id: string, key: string, value: string): Promise<void>;
+
+	/** Newest first. */
+	listCrashes(id: string): Promise<CrashLog[]>;
 }
 
 export interface PanelClientOptions {
