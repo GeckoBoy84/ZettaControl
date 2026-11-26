@@ -21,7 +21,7 @@
     "brand:logos": "npm run brand:logos -w @zettako/bot",
     "tutorial:images": "npm run tutorial:images -w @zettako/bot",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test \"packages/*/test/**/*.test.ts\" \"apps/*/test/**/*.test.ts\""
+    "test": "node --test \"packages/*/test/**/*.test.ts\" \"apps/*/test/**/*.test.ts\" \"private/test/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^25.9.9",

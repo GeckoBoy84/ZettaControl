@@ -5,9 +5,10 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import type { Client, Guild } from 'discord.js';
+import type { ButtonInteraction, Client, Guild } from 'discord.js';
 import type { PanelKind } from '@zettako/panels';
 import { env } from './env.ts';
+import type { ComponentHandler } from './interactions.ts';
 import { logger } from './logger.ts';
 
 export interface CommandEvent {
@@ -38,6 +39,12 @@ export interface BotHooks {
 	onPanelUnlinked?(event: { kind: PanelKind; scope: 'user' | 'guild' }): void | Promise<void>;
 	/** Without this hook, /feedback points people to the support server instead. */
 	onFeedback?(event: FeedbackEvent): void | Promise<void>;
+	/** Takes over the Zettako button in `/panel add`. Without this hook, it asks for an API key. */
+	linkZettako?(interaction: ButtonInteraction, scope: 'user' | 'guild'): Promise<void>;
+	/** Replaces the Zettako line of the `/panel add` prompt, to match linkZettako. */
+	linkZettakoHint?(): string;
+	/** Extra button, select and modal handlers. Their prefixes must not clash with the bot's. */
+	components?(): ComponentHandler[];
 }
 
 let hooks: BotHooks = {};
@@ -55,6 +62,11 @@ export async function loadHooks(): Promise<void> {
 
 export function hasHook(name: keyof BotHooks): boolean {
 	return typeof hooks[name] === 'function';
+}
+
+/** For hooks that answer or take over an interaction, so their errors reach the router. */
+export function getHook<K extends keyof BotHooks>(name: K): BotHooks[K] {
+	return hooks[name];
 }
 
 /** Calls a hook without letting it break the bot. Never awaited by callers. */

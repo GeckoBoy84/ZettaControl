@@ -1,6 +1,7 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, type InteractionReplyOptions } from 'discord.js';
 import { zettako } from '../brand.ts';
 import { PANEL_LINK_PREFIX } from '../components/panel-link.ts';
+import { getHook } from '../hooks.ts';
 import { customId } from '../interactions.ts';
 import { embed } from '../lib/replies.ts';
 
@@ -16,7 +17,8 @@ export function renderLinkPrompt(scope: 'user' | 'guild'): InteractionReplyOptio
 					[
 						`This panel will be usable by ${who}.`,
 						'',
-						`**On ${zettako.name}?** Pick ${zettako.name} and paste an API key from [your account](${zettako.apiKeysUrl}). That is it.`,
+						getHook('linkZettakoHint')?.() ??
+							`**On ${zettako.name}?** Pick ${zettako.name} and paste an API key from [your account](${zettako.apiKeysUrl}). That is it.`,
 						'',
 						'**Another panel?** You will need its URL and a client API key (Account > API Keys). Admin or application keys will not work.',
 						'',

@@ -22,7 +22,7 @@ import { schedulesHandler } from './components/schedules.ts';
 import { serverViewHandler } from './components/server-view.ts';
 import { startupHandler } from './components/startup.ts';
 import { tutorialHandler } from './components/tutorial.ts';
-import { emit } from './hooks.ts';
+import { emit, getHook } from './hooks.ts';
 import { unpackArg, type Command, type ComponentHandler } from './interactions.ts';
 import { describeError, replyError } from './lib/replies.ts';
 import { logger } from './logger.ts';
@@ -58,6 +58,11 @@ const componentHandlers: ComponentHandler[] = [
 const commandsByName = new Map(commands.map((command) => [command.data.name, command]));
 const handlersByPrefix = new Map(componentHandlers.map((handler) => [handler.prefix, handler]));
 
+/** The bot's own handlers first, then any from private hooks (loaded after this module). */
+function componentHandler(prefix: string): ComponentHandler | undefined {
+	return handlersByPrefix.get(prefix) ?? getHook('components')?.().find((handler) => handler.prefix === prefix);
+}
+
 export async function routeInteraction(interaction: Interaction): Promise<void> {
 	const started = performance.now();
 	const label = interactionLabel(interaction);
@@ -80,7 +85,7 @@ export async function routeInteraction(interaction: Interaction): Promise<void> 
 		}
 		if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
 			const [prefix = '', ...args] = interaction.customId.split(':');
-			await handlersByPrefix.get(prefix)?.handle(interaction, args.map(unpackArg));
+			await componentHandler(prefix)?.handle(interaction, args.map(unpackArg));
 		}
 	} catch (error) {
 		ok = false;
